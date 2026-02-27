@@ -17,7 +17,7 @@ pip install glam-cli
 npm install -g glam-cli
 
 # Homebrew
-brew tap twc-vault/glam
+brew tap Sheshiyer/glam
 brew install glam-cli
 ```
 

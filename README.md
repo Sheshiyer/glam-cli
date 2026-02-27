@@ -26,7 +26,7 @@ Detailed gap log: [`docs/GAPS-REMEDIATION.md`](docs/GAPS-REMEDIATION.md)
 ### Homebrew (Release Tap)
 
 ```bash
-brew tap twc-vault/glam
+brew tap Sheshiyer/glam
 brew install glam-cli
 ```
 

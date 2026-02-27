@@ -4,7 +4,7 @@ Use this when migrating from `gram-cli` to new repo `glam-cli`.
 
 ## 1. Create Repo
 
-Create `twc-vault/glam-cli` on GitHub.
+Create `Sheshiyer/glam-cli` on GitHub.
 
 ## 2. Point Local Git Remote
 
@@ -39,7 +39,7 @@ Then create GitHub Release `v0.2.0` and attach:
 
 ## 6. Post-Push Checks
 
-- README links resolve to `twc-vault/glam-cli`.
+- README links resolve to `Sheshiyer/glam-cli`.
 - PyPI package name is `glam-cli`.
 - npm package name is `glam-cli`.
 - Homebrew formula path is `homebrew/glam-cli.rb`.
