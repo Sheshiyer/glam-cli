@@ -1,0 +1,41 @@
+{
+  "name": "glam-cli",
+  "version": "0.2.0",
+  "description": "Node wrapper for the glam Instagram CLI (Python backend)",
+  "author": "TWC Vault <vault@twc.dev>",
+  "license": "MIT",
+  "homepage": "https://github.com/Sheshiyer/glam-cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sheshiyer/glam-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sheshiyer/glam-cli/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "glam": "./bin/glam.js",
+    "gram": "./bin/gram.js"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/install-python-package.mjs",
+    "release:python": "python3 -m build && python3 -m twine check dist/*",
+    "release:npm": "npm publish --access public",
+    "release": "npm run release:python && npm run release:npm"
+  },
+  "keywords": [
+    "instagram",
+    "cli",
+    "python",
+    "wrapper"
+  ]
+}

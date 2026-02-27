@@ -1,0 +1,13 @@
+# Generated and runtime artifacts
+.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.venv-codex/
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.env.*
+dist/

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>glam-cli Architecture</title>
+  <style>
+    :root {
+      --bg: #f4f7f9;
+      --surface: #ffffff;
+      --ink: #1d2935;
+      --muted: #5d6b78;
+      --data: #2f6fcd;
+      --processing: #d97706;
+      --service: #1f9d8b;
+      --success: #15803d;
+      --danger: #b42318;
+      --border: #d8e0e8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 500px at 80% -5%, #dce9f8 0%, var(--bg) 70%);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      padding: 28px;
+      border-radius: 18px;
+      color: #fff;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      letter-spacing: 0.01em;
+      background: linear-gradient(135deg, #1f4e79 0%, #1f9d8b 55%, #2f6fcd 100%);
+      box-shadow: 0 14px 38px rgba(31, 78, 121, 0.25);
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: #f3f8ff;
+      font-size: 0.98rem;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+
+    .section {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(18, 35, 51, 0.06);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.25rem;
+      font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 0.96rem;
+      color: var(--ink);
+    }
+
+    .card p,
+    .card ul {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .card ul {
+      padding-left: 18px;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-right: 6px;
+      margin-top: 5px;
+    }
+
+    .pill.data { background: #deebff; color: #1d4f91; }
+    .pill.proc { background: #fff1db; color: #8a5000; }
+    .pill.svc { background: #dbf7f3; color: #0d6b5c; }
+    .pill.ok { background: #dff7e5; color: #176a36; }
+    .pill.err { background: #fde7e6; color: #8c1d18; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .feature {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fcfdff;
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+
+    .feature span {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .legend {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    code {
+      background: #eef4fa;
+      border: 1px solid #d6e2ee;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.85em;
+    }
+
+    @media (max-width: 900px) {
+      .grid-2,
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      glam-cli Architecture Overview
+      <div class="subtitle">Instagram media download CLI with cookie auth, reliability-critical safeguards, and automation-oriented behavior.</div>
+    </h1>
+
+    <section class="section">
+      <h2>1) Business Context</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Objective</h3>
+          <p>Enable authenticated and public Instagram downloads from a scriptable CLI with predictable outcomes for automation workflows.</p>
+        </div>
+        <div class="card">
+          <h3>Primary Users</h3>
+          <p>Developers, archivists, and operators running recurring content backup or ad-hoc fetch jobs.</p>
+        </div>
+        <div class="card">
+          <h3>Value Delivered</h3>
+          <p>Single tool for login, profile/post/stories/highlights downloads, and machine-readable output modes.</p>
+        </div>
+        <div class="card">
+          <h3>Reliability Metrics</h3>
+          <ul>
+            <li>Errors return non-zero exit codes.</li>
+            <li>Resume mode skips already-downloaded post artifacts.</li>
+            <li>Test suite validates critical command semantics.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2) Data Flow</h2>
+      <svg viewBox="0 0 1120 360" role="img" aria-label="glam-cli data flow diagram">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#4d5f70"></path>
+          </marker>
+        </defs>
+
+        <rect x="24" y="52" width="265" height="240" rx="16" fill="#deebff" stroke="#9cbce7"></rect>
+        <text x="44" y="82" font-size="19" fill="#1d4f91" font-weight="700">Inputs (Data Sources)</text>
+        <text x="44" y="113" font-size="15" fill="#355167">• CLI args / flags</text>
+        <text x="44" y="136" font-size="15" fill="#355167">• ENV credentials</text>
+        <text x="44" y="159" font-size="15" fill="#355167">• config.json5 file</text>
+        <text x="44" y="182" font-size="15" fill="#355167">• Browser cookie store</text>
+        <text x="44" y="205" font-size="15" fill="#355167">• Instagram URL/profile ids</text>
+
+        <rect x="423" y="52" width="275" height="240" rx="16" fill="#fff1db" stroke="#edc78d"></rect>
+        <text x="442" y="82" font-size="19" fill="#8a5000" font-weight="700">Processing</text>
+        <text x="442" y="113" font-size="15" fill="#6d5135">• Click command routing</text>
+        <text x="442" y="136" font-size="15" fill="#6d5135">• Input validation</text>
+        <text x="442" y="159" font-size="15" fill="#6d5135">• Auth/session resolution</text>
+        <text x="442" y="182" font-size="15" fill="#6d5135">• instaloader operations</text>
+        <text x="442" y="205" font-size="15" fill="#6d5135">• Resume skip checks</text>
+        <text x="442" y="228" font-size="15" fill="#6d5135">• Error-to-exit-code mapping</text>
+
+        <rect x="836" y="52" width="260" height="240" rx="16" fill="#dff7e5" stroke="#99d7af"></rect>
+        <text x="856" y="82" font-size="19" fill="#176a36" font-weight="700">Outputs</text>
+        <text x="856" y="113" font-size="15" fill="#315a40">• Media files + metadata</text>
+        <text x="856" y="136" font-size="15" fill="#315a40">• Terminal status messages</text>
+        <text x="856" y="159" font-size="15" fill="#315a40">• JSON output mode</text>
+        <text x="856" y="182" font-size="15" fill="#315a40">• Exit code 0/1 for automation</text>
+        <text x="856" y="205" font-size="15" fill="#315a40">• Build artifacts (wheel/sdist)</text>
+
+        <path d="M289,172 L423,172" stroke="#4d5f70" stroke-width="3" marker-end="url(#arrow)"></path>
+        <path d="M698,172 L836,172" stroke="#4d5f70" stroke-width="3" marker-end="url(#arrow)"></path>
+      </svg>
+      <div class="legend">
+        <span class="pill data">Data Layer</span>
+        <span class="pill proc">Processing Layer</span>
+        <span class="pill ok">Reliable Outputs</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3) Processing Pipeline</h2>
+      <svg viewBox="0 0 1120 220" role="img" aria-label="processing pipeline">
+        <defs>
+          <marker id="arrow2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#5c6f7f"></path>
+          </marker>
+        </defs>
+        <rect x="20" y="68" width="170" height="84" rx="10" fill="#deebff" stroke="#9cbce7"></rect>
+        <text x="42" y="100" font-size="15" fill="#1d4f91">1. Parse CLI</text>
+        <text x="42" y="121" font-size="13" fill="#355167">click context</text>
+
+        <rect x="235" y="68" width="170" height="84" rx="10" fill="#eaf5ff" stroke="#9cbce7"></rect>
+        <text x="252" y="100" font-size="15" fill="#1d4f91">2. Validate Input</text>
+        <text x="252" y="121" font-size="13" fill="#355167">URL/user checks</text>
+
+        <rect x="450" y="68" width="170" height="84" rx="10" fill="#fff1db" stroke="#edc78d"></rect>
+        <text x="466" y="100" font-size="15" fill="#8a5000">3. Resolve Auth</text>
+        <text x="466" y="121" font-size="13" fill="#6d5135">env/config/browser</text>
+
+        <rect x="665" y="68" width="170" height="84" rx="10" fill="#fff1db" stroke="#edc78d"></rect>
+        <text x="682" y="100" font-size="15" fill="#8a5000">4. Download</text>
+        <text x="682" y="121" font-size="13" fill="#6d5135">instaloader API</text>
+
+        <rect x="880" y="68" width="220" height="84" rx="10" fill="#dff7e5" stroke="#99d7af"></rect>
+        <text x="897" y="100" font-size="15" fill="#176a36">5. Emit Results</text>
+        <text x="897" y="121" font-size="13" fill="#315a40">files + JSON + exit code</text>
+
+        <path d="M190,110 L235,110" stroke="#5c6f7f" stroke-width="3" marker-end="url(#arrow2)"></path>
+        <path d="M405,110 L450,110" stroke="#5c6f7f" stroke-width="3" marker-end="url(#arrow2)"></path>
+        <path d="M620,110 L665,110" stroke="#5c6f7f" stroke-width="3" marker-end="url(#arrow2)"></path>
+        <path d="M835,110 L880,110" stroke="#5c6f7f" stroke-width="3" marker-end="url(#arrow2)"></path>
+      </svg>
+    </section>
+
+    <section class="section">
+      <h2>4) System Architecture</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Interface Layer</h3>
+          <p><code>src/gram/cli.py</code> orchestrates commands, validates failures, and emits exit status for shell automation.</p>
+          <div>
+            <span class="pill data">Click CLI</span>
+            <span class="pill err">Exit Codes</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Domain Layer</h3>
+          <p><code>src/gram/auth.py</code> and <code>src/gram/config.py</code> manage credential sources and persistence behavior.</p>
+          <div>
+            <span class="pill svc">AuthManager</span>
+            <span class="pill svc">ConfigManager</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Processing Layer</h3>
+          <p><code>src/gram/downloader.py</code> wraps Instaloader calls, applies auth session checks, and resume-skip logic.</p>
+          <div>
+            <span class="pill proc">Instaloader</span>
+            <span class="pill ok">Resume-Aware</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Presentation Layer</h3>
+          <p><code>src/gram/output.py</code> formats plain text, rich terminal output, and JSON for scripts.</p>
+          <div>
+            <span class="pill data">Human Output</span>
+            <span class="pill data">JSON Mode</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>5) Features</h2>
+      <div class="features">
+        <div class="feature"><strong>Profile/Post/Stories/Highlights</strong><span>Unified command family for public and auth-gated media.</span></div>
+        <div class="feature"><strong>Cookie Login & Save</strong><span>Browser extraction with optional config persistence.</span></div>
+        <div class="feature"><strong>Validation Controls</strong><span>Strict URL and username sanitization before API calls.</span></div>
+        <div class="feature"><strong>Non-Zero Failure Exits</strong><span>Automation-safe command outcomes on validation/runtime failures.</span></div>
+        <div class="feature"><strong>Resume Skip Logic</strong><span>Skips already-downloaded posts by shortcode artifact match.</span></div>
+        <div class="feature"><strong>Tested Reliability Paths</strong><span>Exit-code and resume behavior covered by pytest.</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>6) Deployment & Workflows</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Local Dev</h3>
+          <ul>
+            <li><code>python -m venv .venv</code></li>
+            <li><code>pip install -e ".[dev]"</code></li>
+            <li><code>pytest</code> and <code>python -m build</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Release Artifacts</h3>
+          <ul>
+            <li><code>dist/glam_cli-*.whl</code></li>
+            <li><code>dist/glam_cli-*.tar.gz</code></li>
+            <li>Homebrew formula maintained under <code>homebrew/glam-cli.rb</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Automation Contract</h3>
+          <ul>
+            <li>Success: exit <code>0</code></li>
+            <li>Validation/runtime error: exit <code>1</code></li>
+            <li>Resume mode avoids duplicate post downloads</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Operational Prerequisites</h3>
+          <ul>
+            <li>Python 3.9+</li>
+            <li>Valid Instagram session cookies for protected resources</li>
+            <li>Filesystem write access to download directory</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
