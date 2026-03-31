@@ -29,18 +29,33 @@ export INSTAGRAM_USER_ID="..."
 
 ```bash
 # Chrome
-glam login --chrome-profile Default --save
+glam login --browser chrome --profile Default --save
 
 # Firefox
-glam login --firefox-profile default-release --save
+glam login --browser firefox --profile default-release --save
+
+# Brave
+glam login --browser brave --profile Default --save
+
+# Arc
+glam login --browser arc --profile Default --save
 
 # Use copied DB strategy if browser lock errors occur
-glam login --chrome-profile Default --no-lock --save
+glam login --browser chrome --profile Default --no-lock --save
+
+# Diagnose browser cookie extraction
+glam login --browser chrome --profile Default --diagnose
+
+# Show structured auth debug details
+glam login --browser chrome --profile Default --debug-auth
 ```
 
 Default behavior:
 - `glam login` does not print raw credentials.
 - Use `--print-env` only if you intentionally need export statements printed.
+- Preferred browser selection uses `--browser` plus `--profile`.
+- Legacy flags `--chrome-profile` and `--firefox-profile` still work.
+- On macOS, successful Chromium safe-storage lookups are cached in a glam-owned keychain entry so later CLI runs can often avoid repeating the browser prompt.
 
 ## Method 3: Config File
 
@@ -70,6 +85,14 @@ chmod 600 ~/.config/glam/config.json5
 ### Browser lock errors
 
 - Use `--no-lock` to read from a copied cookie DB.
+
+### Chrome Safe Storage or profile issues
+
+- Use `glam login --browser chrome --profile Default --diagnose` to inspect the resolved cookie DB path and the current auth error code.
+- Use `glam login --browser chrome --profile Default --debug-auth` to emit structured debug fields such as `cookie_db_path`, `prepared_cookie_db_path`, and `key_source`.
+- `key_source` may report `cache-hit`, `persistent-cache-hit`, `keychain`, or `fallback`.
+- If a glam-managed persistent cache entry becomes stale, glam clears it and retries the extraction once before surfacing the failure.
+- Supported `--browser` values include `chrome`, `firefox`, `brave`, `arc`, `chromium`, `edge`, `opera`, `opera-gx`, and `vivaldi`.
 
 ### Invalid credentials
 

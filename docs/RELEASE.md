@@ -66,8 +66,8 @@ brew style homebrew/glam-cli.rb
 5. After formula is in your tap, run:
 
 ```bash
-brew audit --strict --tap Sheshiyer/glam glam-cli
-brew install --build-from-source Sheshiyer/glam/glam-cli
+brew audit --strict --tap twc-vault/glam glam-cli
+brew install --build-from-source twc-vault/glam/glam-cli
 brew test glam-cli
 ```
 

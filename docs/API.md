@@ -32,6 +32,15 @@ glam profile username --json
 glam post https://www.instagram.com/p/ABC123/
 ```
 
+### `saved`
+
+Download saved/bookmarked posts for the authenticated account.
+
+```bash
+glam saved
+glam saved --limit 50 --resume
+```
+
 ### `stories <user>`
 
 ```bash
@@ -47,14 +56,19 @@ glam highlights username
 ### `login`
 
 ```bash
-glam login --chrome-profile Default --save
-glam login --firefox-profile default-release --save
-glam login --chrome-profile "Profile 1" --print-env
+glam login --browser chrome --profile Default --save
+glam login --browser firefox --profile default-release --save
+glam login --browser brave --profile Default --save
+glam login --browser chrome --profile "Profile 1" --print-env
 ```
 
 Notes:
 - `login` no longer prints raw credential values by default.
 - Use `--print-env` only when you intentionally want sensitive exports in stdout.
+- Supported `--browser` values: `chrome`, `firefox`, `brave`, `arc`, `chromium`, `edge`, `opera`, `opera-gx`, `vivaldi`.
+- Legacy `--chrome-profile` and `--firefox-profile` flags remain available.
+- On macOS, successful Chromium safe-storage lookups are cached in a glam-owned keychain entry for reuse across later CLI runs.
+- `--debug-auth` can report `key_source` values such as `cache-hit`, `persistent-cache-hit`, `keychain`, and `fallback`.
 
 ### `check`
 

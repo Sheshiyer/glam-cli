@@ -80,7 +80,7 @@ class ConfigManager:
         if not config:
             return None
 
-        if "sessionid" in config and "csrftoken" in config:
+        if "sessionid" in config and ("userId" in config or "user_id" in config):
             return AuthCredentials.from_dict(config)
 
         auth_config = config.get("auth")

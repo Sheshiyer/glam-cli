@@ -23,3 +23,16 @@ def test_auth_manager_loads_default_config_when_no_explicit_path(
     creds = auth.get_credentials()
     assert creds is not None
     assert creds.user_id == "1234"
+
+
+def test_auth_manager_accepts_env_without_csrftoken(monkeypatch) -> None:
+    monkeypatch.setenv("INSTAGRAM_SESSIONID", "session")
+    monkeypatch.delenv("INSTAGRAM_CSRFTOKEN", raising=False)
+    monkeypatch.setenv("INSTAGRAM_USER_ID", "1234")
+
+    auth = AuthManager()
+
+    assert auth.is_authenticated() is True
+    creds = auth.get_credentials()
+    assert creds is not None
+    assert creds.csrftoken == ""

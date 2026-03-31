@@ -48,6 +48,7 @@ class InstagramDownloader:
             username = self.loader.test_login()
             if not username:
                 raise RuntimeError("Invalid or expired Instagram credentials")
+            self.loader.context.username = username
         except Exception as err:
             raise RuntimeError(f"Login failed: {err}") from err
 
@@ -126,6 +127,41 @@ class InstagramDownloader:
                     self.loader.download_storyitem(item, target=f"{username}/highlights/{title}")
         except instaloader.exceptions.InstaloaderException as err:
             raise RuntimeError(f"Failed to download highlights: {err}") from err
+
+    def download_saved_posts(
+        self,
+        limit: int | None = None,
+        resume: bool = False,
+    ) -> None:
+        """Download saved/bookmarked posts from the authenticated account."""
+        if not self.auth.is_authenticated():
+            raise ValueError("Authentication required to download saved posts")
+
+        if limit is not None and limit < 0:
+            raise ValueError("Limit must be non-negative")
+
+        try:
+            username = self.loader.test_login()
+            if not username:
+                raise RuntimeError("Invalid or expired Instagram credentials")
+            self.loader.context.username = username
+
+            profile = instaloader.Profile.from_username(self.loader.context, username)
+            posts = profile.get_saved_posts()
+
+            if limit is not None:
+                posts = islice(posts, limit)
+
+            for post in posts:
+                shortcode = getattr(post, "shortcode", None)
+                if not isinstance(shortcode, str):
+                    continue
+                if resume and self._post_exists("saved", shortcode):
+                    continue
+                self.loader.download_post(post, target="saved")
+
+        except instaloader.exceptions.InstaloaderException as err:
+            raise RuntimeError(f"Failed to download saved posts: {err}") from err
 
     @staticmethod
     def _extract_shortcode(url: str) -> str:
