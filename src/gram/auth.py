@@ -3,23 +3,17 @@
 from __future__ import annotations
 
 import os
-import shutil
-import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import instaloader
 
-browser_cookie3: Any
-try:
-    import browser_cookie3 as _browser_cookie3  # type: ignore[import-untyped]
-
-    browser_cookie3 = _browser_cookie3
-except ImportError:
-    browser_cookie3 = None
-
-COOKIE_DOMAIN = "instagram.com"
+from gram.browser_auth import (
+    BrowserAuthDiagnosis,
+    BrowserAuthResult,
+    diagnose_browser,
+    extract_browser,
+)
 
 
 @dataclass
@@ -31,8 +25,8 @@ class AuthCredentials:
     user_id: str
 
     def is_valid(self) -> bool:
-        """Check if all required fields are present."""
-        return bool(self.sessionid and self.csrftoken and self.user_id)
+        """Check if the minimum fields for authenticated reads are present."""
+        return bool(self.sessionid and self.user_id)
 
     def to_dict(self) -> dict[str, str]:
         """Convert to dictionary for config storage."""
@@ -52,6 +46,14 @@ class AuthCredentials:
         )
 
 
+@dataclass
+class AuthLoginResult:
+    """Application-level login extraction result."""
+
+    credentials: AuthCredentials
+    debug: Any
+
+
 class AuthManager:
     """Manages Instagram authentication."""
 
@@ -66,10 +68,10 @@ class AuthManager:
         csrftoken = os.getenv("INSTAGRAM_CSRFTOKEN")
         user_id = os.getenv("INSTAGRAM_USER_ID") or os.getenv("INSTAGRAM_DS_USER_ID")
 
-        if sessionid and csrftoken and user_id:
+        if sessionid and user_id:
             self._credentials = AuthCredentials(
                 sessionid=sessionid,
-                csrftoken=csrftoken,
+                csrftoken=csrftoken or "",
                 user_id=user_id,
             )
             return
@@ -93,11 +95,13 @@ class AuthManager:
         """Get credentials as cookie dict for Instaloader."""
         if not self._credentials:
             return {}
-        return {
+        session = {
             "sessionid": self._credentials.sessionid,
-            "csrftoken": self._credentials.csrftoken,
             "ds_user_id": self._credentials.user_id,
         }
+        if self._credentials.csrftoken:
+            session["csrftoken"] = self._credentials.csrftoken
+        return session
 
     def get_current_user(self) -> dict[str, Any]:
         """Get current user info (requires valid auth)."""
@@ -131,31 +135,38 @@ class AuthManager:
             }
 
     @classmethod
+    def extract_browser_login(
+        cls,
+        browser: str,
+        profile: str,
+        ignore_lock: bool = False,
+    ) -> AuthLoginResult:
+        """Extract browser cookies plus debug information."""
+        result = extract_browser(browser=browser, profile=profile, ignore_lock=ignore_lock)
+        return cls._to_auth_login_result(result)
+
+    @classmethod
+    def diagnose_browser_login(
+        cls,
+        browser: str,
+        profile: str,
+        ignore_lock: bool = False,
+    ) -> BrowserAuthDiagnosis:
+        """Diagnose browser cookie extraction."""
+        return diagnose_browser(browser=browser, profile=profile, ignore_lock=ignore_lock)
+
+    @classmethod
     def extract_from_chrome(
         cls,
         profile: str = "Default",
         ignore_lock: bool = False,
     ) -> AuthCredentials:
         """Extract Instagram cookies from Chrome."""
-        if browser_cookie3 is None:
-            raise RuntimeError(
-                "browser-cookie3 is required. Install with: pip install browser-cookie3"
-            )
-
-        cookie_file = cls._resolve_chrome_cookie_file(profile)
-        prepared_cookie_file, temp_dir = cls._prepare_cookie_file(cookie_file, ignore_lock)
-
-        try:
-            cookie_jar = browser_cookie3.chrome(
-                domain_name=COOKIE_DOMAIN,
-                cookie_file=prepared_cookie_file,
-            )
-            return cls._extract_required_cookies(cookie_jar)
-        except Exception as err:
-            raise RuntimeError(f"Failed to extract Chrome cookies: {err}") from err
-        finally:
-            if temp_dir is not None:
-                temp_dir.cleanup()
+        return cls.extract_browser_login(
+            browser="chrome",
+            profile=profile,
+            ignore_lock=ignore_lock,
+        ).credentials
 
     @classmethod
     def extract_from_firefox(
@@ -164,118 +175,23 @@ class AuthManager:
         ignore_lock: bool = False,
     ) -> AuthCredentials:
         """Extract Instagram cookies from Firefox."""
-        if browser_cookie3 is None:
-            raise RuntimeError(
-                "browser-cookie3 is required. Install with: pip install browser-cookie3"
-            )
-
-        cookie_file = cls._resolve_firefox_cookie_file(profile)
-        prepared_cookie_file, temp_dir = cls._prepare_cookie_file(cookie_file, ignore_lock)
-
-        try:
-            cookie_jar = browser_cookie3.firefox(
-                domain_name=COOKIE_DOMAIN,
-                cookie_file=prepared_cookie_file,
-            )
-            return cls._extract_required_cookies(cookie_jar)
-        except Exception as err:
-            raise RuntimeError(f"Failed to extract Firefox cookies: {err}") from err
-        finally:
-            if temp_dir is not None:
-                temp_dir.cleanup()
+        return cls.extract_browser_login(
+            browser="firefox",
+            profile=profile,
+            ignore_lock=ignore_lock,
+        ).credentials
 
     @staticmethod
-    def _extract_required_cookies(cookie_jar: Any) -> AuthCredentials:
-        cookies = {cookie.name: cookie.value for cookie in cookie_jar}
-
-        sessionid = _coerce_string(cookies.get("sessionid"))
-        csrftoken = _coerce_string(cookies.get("csrftoken"))
-        user_id = _coerce_string(cookies.get("ds_user_id"))
-
-        if not (sessionid and csrftoken and user_id):
-            raise ValueError(
-                "Could not find all required cookies. Make sure you're logged into "
-                "instagram.com in the selected browser profile."
-            )
-
-        return AuthCredentials(
-            sessionid=sessionid,
-            csrftoken=csrftoken,
-            user_id=user_id,
+    def _to_auth_login_result(result: BrowserAuthResult) -> AuthLoginResult:
+        credentials = AuthCredentials(
+            sessionid=result.credentials.sessionid,
+            csrftoken=result.credentials.csrftoken,
+            user_id=result.credentials.user_id,
         )
-
-    @staticmethod
-    def _resolve_chrome_cookie_file(profile: str) -> Path | None:
-        profile_name = profile or "Default"
-        home = Path.home()
-
-        candidates = [
-            home / "Library/Application Support/Google/Chrome" / profile_name / "Cookies",
-            home / ".config/google-chrome" / profile_name / "Cookies",
-            home / ".config/chromium" / profile_name / "Cookies",
-        ]
-        return _first_existing(candidates)
-
-    @staticmethod
-    def _resolve_firefox_cookie_file(profile: str) -> Path | None:
-        profile_name = profile or "default-release"
-        profile_path = Path(profile_name).expanduser()
-        if profile_path.suffix == ".sqlite" and profile_path.exists():
-            return profile_path
-
-        home = Path.home()
-        direct_candidates = [
-            home
-            / "Library/Application Support/Firefox/Profiles"
-            / profile_name
-            / "cookies.sqlite",
-            home / ".mozilla/firefox" / profile_name / "cookies.sqlite",
-        ]
-
-        found = _first_existing(direct_candidates)
-        if found:
-            return found
-
-        glob_candidates = [
-            home / "Library/Application Support/Firefox/Profiles",
-            home / ".mozilla/firefox",
-        ]
-
-        for base in glob_candidates:
-            if not base.exists():
-                continue
-            pattern = f"*{profile_name}*/cookies.sqlite"
-            matches = sorted(base.glob(pattern))
-            if matches:
-                return matches[0]
-
-        return None
-
-    @staticmethod
-    def _prepare_cookie_file(
-        cookie_file: Path | None,
-        ignore_lock: bool,
-    ) -> tuple[str | None, tempfile.TemporaryDirectory[str] | None]:
-        if cookie_file is None:
-            return None, None
-
-        if not ignore_lock:
-            return str(cookie_file), None
-
-        temp_dir = tempfile.TemporaryDirectory(prefix="glam-cookies-")
-        temp_path = Path(temp_dir.name) / cookie_file.name
-        shutil.copy2(cookie_file, temp_path)
-        return str(temp_path), temp_dir
+        return AuthLoginResult(credentials=credentials, debug=result.debug)
 
 
 def _coerce_string(value: Any) -> str:
     if isinstance(value, str):
         return value
     return ""
-
-
-def _first_existing(paths: list[Path]) -> Path | None:
-    for path in paths:
-        if path.exists():
-            return path
-    return None

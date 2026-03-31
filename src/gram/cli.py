@@ -8,6 +8,11 @@ import click
 
 from gram import __version__
 from gram.auth import AuthManager
+from gram.browser_auth import (
+    SUPPORTED_BROWSER_SLUGS,
+    BrowserAuthError,
+    resolve_browser_profile,
+)
 from gram.config import ConfigManager
 from gram.downloader import InstagramDownloader
 from gram.output import OutputFormatter
@@ -33,6 +38,61 @@ def _fail(ctx: click.Context, message: str) -> None:
     output = _ctx_data(ctx)["output"]
     output.error(message)
     ctx.exit(1)
+
+
+def _emit_auth_debug(output: OutputFormatter, debug_payload: dict[str, object]) -> None:
+    """Emit structured auth debug output."""
+    output.data({"auth_debug": debug_payload})
+
+
+def _serialize_payload(value: object) -> object:
+    """Convert a structured object into a serializable payload."""
+    to_dict = getattr(value, "to_dict", None)
+    if callable(to_dict):
+        return to_dict()
+
+    if isinstance(value, dict):
+        return {key: _serialize_payload(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_serialize_payload(item) for item in value]
+
+    value_dict = getattr(value, "__dict__", None)
+    if isinstance(value_dict, dict):
+        return {key: _serialize_payload(item) for key, item in value_dict.items()}
+
+    return value
+
+
+def _resolve_login_target(
+    ctx: click.Context,
+    browser: str | None,
+    profile: str | None,
+    chrome_profile: str | None,
+    firefox_profile: str | None,
+) -> tuple[str, str]:
+    """Resolve the target browser/profile for login flows."""
+    has_generic = browser is not None or profile is not None
+    has_legacy = chrome_profile is not None or firefox_profile is not None
+
+    if has_generic and has_legacy:
+        _fail(ctx, "Do not mix --browser/--profile with legacy browser flags")
+
+    if chrome_profile and firefox_profile:
+        _fail(ctx, "Specify only one of --chrome-profile or --firefox-profile")
+
+    if browser:
+        return browser, resolve_browser_profile(browser, profile)
+
+    if profile and not browser:
+        _fail(ctx, "Use --profile only together with --browser")
+
+    if chrome_profile:
+        return "chrome", chrome_profile
+    if firefox_profile:
+        return "firefox", firefox_profile
+
+    _fail(ctx, "Specify --browser/--profile or one legacy profile flag")
+    raise AssertionError("unreachable")
 
 
 @click.group()
@@ -189,7 +249,37 @@ def highlights(ctx: click.Context, username: str, output: str | None) -> None:
         _fail(ctx, f"Download failed: {err}")
 
 
+@cli.command("saved")
+@click.option("--output", "output", type=click.Path(), help="Output directory")
+@click.option("--limit", "limit", type=int, help="Limit number of saved posts")
+@click.option("--resume", is_flag=True, help="Resume interrupted download")
+@click.pass_context
+def saved_posts(
+    ctx: click.Context,
+    output: str | None,
+    limit: int | None,
+    resume: bool,
+) -> None:
+    """Download saved/bookmarked posts for the authenticated account."""
+    data = _ctx_data(ctx)
+    auth = data["auth"]
+    output_fmt = data["output"]
+
+    if not auth.is_authenticated():
+        _fail(ctx, "Authentication required. Run 'glam login' first.")
+
+    try:
+        downloader = InstagramDownloader(auth=auth, output_dir=output)
+        output_fmt.info("Downloading saved posts...")
+        downloader.download_saved_posts(limit=limit, resume=resume)
+        output_fmt.success("Download complete")
+    except Exception as err:
+        _fail(ctx, f"Download failed: {err}")
+
+
 @cli.command()
+@click.option("--browser", type=click.Choice(SUPPORTED_BROWSER_SLUGS), help="Browser name")
+@click.option("--profile", help="Browser profile name")
 @click.option("--chrome-profile", help="Chrome profile name")
 @click.option("--firefox-profile", help="Firefox profile name")
 @click.option("--save", is_flag=True, help="Save to config file")
@@ -203,35 +293,64 @@ def highlights(ctx: click.Context, username: str, output: str | None) -> None:
     is_flag=True,
     help="Ignore browser lock by reading from a copied cookie DB",
 )
+@click.option(
+    "--diagnose",
+    is_flag=True,
+    help="Diagnose browser cookie extraction without saving credentials",
+)
+@click.option(
+    "--debug-auth",
+    is_flag=True,
+    help="Emit structured browser auth debug details",
+)
 @click.pass_context
 def login(
     ctx: click.Context,
+    browser: str | None,
+    profile: str | None,
     chrome_profile: str | None,
     firefox_profile: str | None,
     save: bool,
     print_env: bool,
     no_lock: bool,
+    diagnose: bool,
+    debug_auth: bool,
 ) -> None:
     """Extract cookies from browser for authentication."""
     data = _ctx_data(ctx)
     output_fmt = data["output"]
+    browser_name, profile_name = _resolve_login_target(
+        ctx,
+        browser,
+        profile,
+        chrome_profile,
+        firefox_profile,
+    )
+    browser_label = browser_name.replace("-", " ").title()
 
     try:
-        if chrome_profile:
-            output_fmt.info(f"Extracting cookies from Chrome ({chrome_profile})...")
-            credentials = AuthManager.extract_from_chrome(
-                profile=chrome_profile,
+        if diagnose:
+            output_fmt.info(f"Diagnosing cookies from {browser_label} ({profile_name})...")
+            diagnosis = AuthManager.diagnose_browser_login(
+                browser=browser_name,
+                profile=profile_name,
                 ignore_lock=no_lock,
             )
-        elif firefox_profile:
-            output_fmt.info(f"Extracting cookies from Firefox ({firefox_profile})...")
-            credentials = AuthManager.extract_from_firefox(
-                profile=firefox_profile,
-                ignore_lock=no_lock,
-            )
-        else:
-            _fail(ctx, "Specify --chrome-profile or --firefox-profile")
+            output_fmt.data(_serialize_payload(diagnosis))
+            if not diagnosis.ok:
+                ctx.exit(1)
             return
+
+        output_fmt.info(f"Extracting cookies from {browser_label} ({profile_name})...")
+        login_result = AuthManager.extract_browser_login(
+            browser=browser_name,
+            profile=profile_name,
+            ignore_lock=no_lock,
+        )
+        credentials = login_result.credentials
+
+        if debug_auth:
+            _emit_auth_debug(output_fmt, _serialize_payload(login_result.debug))
 
         if save:
             config_manager = ConfigManager(data["config_path"])
@@ -249,6 +368,10 @@ def login(
             output_fmt.info("Credentials were not printed for safety.")
             output_fmt.info("Use --save to persist in config or --print-env to emit shell exports.")
 
+    except BrowserAuthError as err:
+        if debug_auth:
+            _emit_auth_debug(output_fmt, _serialize_payload(err.debug))
+        _fail(ctx, f"Cookie extraction failed [{err.code}]: {err}")
     except Exception as err:
         _fail(ctx, f"Cookie extraction failed: {err}")
 

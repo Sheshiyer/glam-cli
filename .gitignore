@@ -1,13 +1,15 @@
-# Generated and runtime artifacts
+.DS_Store
 .coverage
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 .venv/
 .venv-codex/
-.DS_Store
 __pycache__/
+*.egg-info/
 *.pyc
-.env
-.env.*
+build/
 dist/
+htmlcov/
+node_modules/
+*.tgz

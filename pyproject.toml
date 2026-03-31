@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "glam-cli"
-version = "0.2.0"
-description = "Instagram CLI for downloading posts, stories, and profiles"
+version = "0.3.0"
+description = "Instagram CLI for browser-authenticated profile, saved, story, and highlight downloads"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [

@@ -34,6 +34,10 @@ class OutputFormatter:
             return
 
         if self.console:
+            if isinstance(data, (dict, list)):
+                self.console.print_json(data=json.dumps(data, default=str))
+            else:
+                self.console.print(data)
             return
 
         if isinstance(data, dict):
@@ -87,6 +91,10 @@ class OutputFormatter:
             self.console.print(f"[yellow]WARN[/yellow] {message}")
         else:
             print(f"WARN {message}")
+
+    def data(self, payload: Any) -> None:
+        """Emit structured data in the active output mode."""
+        self._output(payload)
 
     def user_info(self, user: dict[str, Any]) -> None:
         """Display user information."""

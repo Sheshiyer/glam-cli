@@ -28,14 +28,14 @@ git push origin --tags
 ## 5. Release Baseline
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
-Then create GitHub Release `v0.2.0` and attach:
+Then create GitHub Release `v0.3.0` and attach:
 
-- `dist/glam_cli-0.2.0.tar.gz`
-- `dist/glam_cli-0.2.0-py3-none-any.whl`
+- `dist/glam_cli-0.3.0.tar.gz`
+- `dist/glam_cli-0.3.0-py3-none-any.whl`
 
 ## 6. Post-Push Checks
 

@@ -1,7 +1,7 @@
 {
   "name": "glam-cli",
-  "version": "0.2.0",
-  "description": "Node wrapper for the glam Instagram CLI (Python backend)",
+  "version": "0.3.0",
+  "description": "Node wrapper for the glam Instagram CLI with browser-authenticated downloads",
   "author": "TWC Vault <vault@twc.dev>",
   "license": "MIT",
   "homepage": "https://github.com/Sheshiyer/glam-cli",
@@ -22,7 +22,7 @@
   },
   "files": [
     "bin",
-    "scripts",
+    "scripts/install-python-package.mjs",
     "README.md",
     "LICENSE"
   ],

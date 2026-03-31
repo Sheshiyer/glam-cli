@@ -5,7 +5,7 @@
 class GlamCli < Formula
   include Language::Python::Virtualenv
 
-  desc "Instagram CLI for downloading posts, stories, and profiles"
+  desc "Instagram CLI for browser-authenticated profile, saved, story, and highlight downloads"
   homepage "https://github.com/Sheshiyer/glam-cli"
   url "https://files.pythonhosted.org/packages/source/g/glam_cli/glam_cli-0.2.0.tar.gz"
   sha256 "cc987f2a24772bdfe226edbaad1fc8b58ebd09d2302d32b99013a9583aee6e44"
